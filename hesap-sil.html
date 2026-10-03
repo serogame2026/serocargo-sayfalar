@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SeroCargo — Hesap Silme / Delete Account</title>
+<style>
+  :root { --mavi:#1f5fcc; --koyu:#0a1a3d; --acik:#eaf1ff; --kirmizi:#c0392b; --yesil:#1e9e5a; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+         background: linear-gradient(180deg,#0a1a3d,#14337a); color:#fff; min-height:100vh;
+         display:flex; justify-content:center; padding:24px 14px; }
+  .kutu { width:100%; max-width:560px; background:#fff; color:#10203f; border-radius:16px;
+          padding:26px 22px 30px; box-shadow:0 10px 40px rgba(0,0,0,.35); }
+  .logo { font-weight:800; font-size:30px; letter-spacing:.5px; margin:0 0 4px; }
+  .logo .a { color:#0a3496; } .logo .b { color:#000; }
+  h1 { font-size:20px; margin:6px 0 14px; }
+  p, li { line-height:1.5; font-size:15px; }
+  .uyari { background:#fff4e5; border-left:5px solid #f39c12; padding:10px 14px; border-radius:8px; margin:14px 0; }
+  label { display:block; font-weight:600; margin:14px 0 6px; font-size:14px; }
+  input[type=text], input[type=password] { width:100%; padding:13px 14px; font-size:16px;
+        border:2px solid #c8d6f3; border-radius:10px; outline:none; }
+  input[type=text]:focus, input[type=password]:focus { border-color:var(--mavi); }
+  .onay { display:flex; gap:10px; align-items:flex-start; margin:16px 0 4px; font-size:14px; }
+  .onay input { margin-top:3px; width:20px; height:20px; }
+  button { width:100%; margin-top:16px; padding:15px; font-size:17px; font-weight:700; color:#fff;
+           background:var(--kirmizi); border:0; border-radius:12px; cursor:pointer; }
+  button:disabled { background:#b9b9b9; cursor:not-allowed; }
+  #sonuc { margin-top:16px; padding:12px 14px; border-radius:10px; font-size:15px; display:none; }
+  .iyi { background:#e6f7ee; color:#0d6b3a; border:1px solid #9bd8b6; }
+  .kotu { background:#fdecea; color:#8e2318; border:1px solid #f1b0a8; }
+  .dil { text-align:right; margin-bottom:4px; }
+  .dil a { color:var(--mavi); font-weight:600; cursor:pointer; text-decoration:underline; font-size:14px; }
+  hr { border:0; border-top:1px solid #dde6f7; margin:22px 0 14px; }
+  .alt { font-size:13px; color:#51607f; }
+</style>
+</head>
+<body>
+<div class="kutu">
+  <div class="dil"><a id="dilDugme">English</a></div>
+  <div class="logo"><span class="a">Sero</span><span class="b">Cargo</span></div>
+
+  <h1 id="baslik"></h1>
+  <p id="giris"></p>
+
+  <div class="uyari" id="uyari"></div>
+
+  <label id="lKullanici" for="kullanici"></label>
+  <input type="text" id="kullanici" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false">
+
+  <label id="lSifre" for="sifre"></label>
+  <input type="password" id="sifre" autocomplete="current-password">
+
+  <div class="onay">
+    <input type="checkbox" id="onay">
+    <label for="onay" id="lOnay" style="margin:0;font-weight:400"></label>
+  </div>
+
+  <button id="sil" disabled></button>
+  <div id="sonuc"></div>
+
+  <hr>
+  <p class="alt" id="misafir"></p>
+  <p class="alt" id="silinenler"></p>
+</div>
+
+<script>
+const URL_ = "https://upcivrvjwmwwgxursvep.supabase.co";
+const ANAHTAR = "sb_publishable_cj-xvvioQmjBmOiewcgJig_fjTflcbl";   // herkese açık anahtar
+
+const METIN = {
+  tr: {
+    dil: "English",
+    baslik: "Hesabımı ve verilerimi sil",
+    giris: "SeroCargo hesabını (üyeliğini) ve sunucudaki verilerini buradan kalıcı olarak silebilirsin. Oyunun içinden de silebilirsin: Ana menü → ÇEVRİMİÇİ → Hesabım → HESABIMI SİL.",
+    uyari: "<b>Bu işlem geri alınamaz.</b> Silinenler: üyeliğin, global tablolardaki skorların, bulut yedeğin (rozetler, ünvanlar, rekorlar, meydan okuma ilerlemesi) ve oyuncu adın. Telefonundaki oyun verileri silinmez; onları oyunu kaldırarak silebilirsin.",
+    kullanici: "Kullanıcı adı", sifre: "Şifre",
+    onay: "Hesabımın ve sunucudaki tüm verilerimin kalıcı olarak silineceğini anlıyorum.",
+    sil: "HESABIMI KALICI OLARAK SİL",
+    bekle: "İşlem yapılıyor…",
+    bitti: "Hesabın ve sunucudaki verilerin silindi. Telefonundaki oyun verileri bu işlemden etkilenmedi.",
+    hataGiris: "Kullanıcı adı ya da şifre yanlış.",
+    hataSayi: "Çok fazla yanlış deneme. 10 dakika sonra tekrar dene.",
+    hataAg: "Bağlantı sorunu. İnternetini kontrol edip tekrar dene.",
+    hataGenel: "Bir sorun oluştu. Biraz sonra tekrar dene.",
+    misafir: "<b>Üye olmadan (misafir) oynadıysan:</b> misafir kimliği bir kullanıcı adı ya da şifre içermez, bu sayfadan silinemez. Oyunun içinden Ana menü → ÇEVRİMİÇİ → Hesabım ekranından silebilirsin; ya da bize yazarak talep edebilirsin: serocargo2026@gmail.com",
+    silinenler: "Şifreni unuttuysan hesabı bu sayfadan silemeyiz; bize yazarak talep edebilirsin: serocargo2026@gmail.com"
+  },
+  en: {
+    dil: "Türkçe",
+    baslik: "Delete my account and data",
+    giris: "You can permanently delete your SeroCargo account (membership) and your data stored on our server here. You can also do it inside the game: Main menu → ONLINE → My Account → DELETE ACCOUNT.",
+    uyari: "<b>This cannot be undone.</b> Deleted: your membership, your scores on the global boards, your cloud backup (badges, titles, records, challenge progress) and your player name. Game data on your phone is not deleted; remove it by uninstalling the game.",
+    kullanici: "Username", sifre: "Password",
+    onay: "I understand that my account and all my data on the server will be permanently deleted.",
+    sil: "PERMANENTLY DELETE MY ACCOUNT",
+    bekle: "Working…",
+    bitti: "Your account and server data were deleted. Game data on your phone was not affected.",
+    hataGiris: "Wrong username or password.",
+    hataSayi: "Too many wrong attempts. Try again in 10 minutes.",
+    hataAg: "Connection problem. Check your internet and try again.",
+    hataGenel: "Something went wrong. Please try again shortly.",
+    misafir: "<b>If you played without signing up (guest):</b> a guest identity has no username or password, so it can't be deleted from this page. Delete it in the game from Main menu → ONLINE → My Account, or contact us to request it: serocargo2026@gmail.com",
+    silinenler: "If you forgot your password we can't delete the account from this page; contact us to request deletion: serocargo2026@gmail.com"
+  }
+};
+
+let dil = (navigator.language || "tr").toLowerCase().startsWith("tr") ? "tr" : "en";
+const $ = (id) => document.getElementById(id);
+
+function yaz() {
+  const m = METIN[dil];
+  document.documentElement.lang = dil;
+  $("dilDugme").textContent = m.dil;
+  $("baslik").textContent = m.baslik;
+  $("giris").textContent = m.giris;
+  $("uyari").innerHTML = m.uyari;
+  $("lKullanici").textContent = m.kullanici;
+  $("lSifre").textContent = m.sifre;
+  $("lOnay").textContent = m.onay;
+  $("sil").textContent = m.sil;
+  $("misafir").innerHTML = m.misafir;
+  $("silinenler").textContent = m.silinenler;
+}
+$("dilDugme").onclick = () => { dil = dil === "tr" ? "en" : "tr"; yaz(); };
+yaz();
+
+function sonuc(metin, iyi) {
+  const s = $("sonuc");
+  s.textContent = metin;
+  s.className = iyi ? "iyi" : "kotu";
+  s.style.display = "block";
+}
+
+function dugmeDurumu() {
+  $("sil").disabled = !($("onay").checked && $("kullanici").value.trim().length >= 3 && $("sifre").value.length >= 1);
+}
+["onay", "kullanici", "sifre"].forEach((id) => $(id).addEventListener("input", dugmeDurumu));
+$("onay").addEventListener("change", dugmeDurumu);
+
+async function rpc(fn, govde, jeton) {
+  const r = await fetch(URL_ + "/rest/v1/rpc/" + fn, {
+    method: "POST",
+    headers: { "apikey": ANAHTAR, "Authorization": "Bearer " + jeton, "Content-Type": "application/json" },
+    body: JSON.stringify(govde)
+  });
+  const metin = await r.text();
+  let veri = null; try { veri = JSON.parse(metin); } catch (e) {}
+  return { ok: r.ok, durum: r.status, veri };
+}
+
+$("sil").onclick = async () => {
+  const m = METIN[dil];
+  const kullanici = $("kullanici").value.trim().toLowerCase();
+  const sifre = $("sifre").value;
+
+  $("sil").disabled = true;
+  sonuc(m.bekle, true);
+
+  try {
+    // 1) Geçici (anonim) kimlik
+    const a = await fetch(URL_ + "/auth/v1/signup", {
+      method: "POST",
+      headers: { "apikey": ANAHTAR, "Content-Type": "application/json" },
+      body: "{}"
+    });
+    if (!a.ok) { sonuc(m.hataGenel, false); dugmeDurumu(); return; }
+    const oturum = await a.json();
+    const jeton = oturum.access_token;
+
+    // 2) Kullanıcı adı + şifre ile doğrula
+    const g = await rpc("member_login", { p_username: kullanici, p_password: sifre }, jeton);
+    if (!g.ok || !g.veri) { sonuc(m.hataGenel, false); dugmeDurumu(); return; }
+    if (!g.veri.ok) {
+      sonuc(g.veri.reason === "rate_limit" ? m.hataSayi : m.hataGiris, false);
+      dugmeDurumu();
+      return;
+    }
+
+    // 3) Hesabı sil
+    const s = await rpc("account_delete", {}, jeton);
+    if (s.ok && s.veri && s.veri.ok) {
+      sonuc(m.bitti, true);
+      $("sifre").value = ""; $("onay").checked = false;
+    } else {
+      sonuc(m.hataGenel, false);
+      dugmeDurumu();
+    }
+  } catch (e) {
+    sonuc(m.hataAg, false);
+    dugmeDurumu();
+  }
+};
+</script>
+</body>
+</html>
